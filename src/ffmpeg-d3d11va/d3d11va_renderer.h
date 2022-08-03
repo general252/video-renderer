@@ -12,6 +12,8 @@ public:
 
 	virtual void RenderFrame(AVFrame* frame);
 
-private:
+	void SetUseShareTexture(bool used) { useShareTexture = used; }
 
+private:
+	bool useShareTexture = false;
 };

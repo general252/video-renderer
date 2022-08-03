@@ -97,10 +97,33 @@ bool D3D11RenderTexture::InitTexture(UINT width, UINT height, DXGI_FORMAT format
 	texture_desc.CPUAccessFlags = cpu_flags;
 	texture_desc.MiscFlags = misc_flags;
 
+	if (DXGI_FORMAT_NV12 == format) {
+		/*
+			D3D11_USAGE      CPU¶Á  CPUÐ´    GPU¶Á    GPUÐ´
+		D3D11_USAGE_DEFAULT                   ¡Ì       ¡Ì
+		D3D11_USAGE_IMMUTABLE                 ¡Ì
+		D3D11_USAGE_DYNAMIC           ¡Ì       ¡Ì
+		D3D11_USAGE_STAGING    ¡Ì      ¡Ì       ¡Ì       ¡Ì
+		*/
+		texture_desc.Usage = D3D11_USAGE_DEFAULT;
+		texture_desc.CPUAccessFlags = 0;
+		texture_desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED;
+	}
+
 	hr = d3d11_device_->CreateTexture2D(&texture_desc, nullptr, &texture_);
 	if (FAILED(hr)) {
 		LOG("ID3D11Device::CreateTexture2D() failed, %x", hr);
 		return false;
+	}
+
+	// ¹²ÏíÎÆÀí, ´ò¿ªÎÆÀí¾ä±ú
+	if (DXGI_FORMAT_NV12 == format) {
+		IDXGIResource* dxgiShareTexture = NULL;
+		hr = texture_->QueryInterface(__uuidof(IDXGIResource), (void**)&dxgiShareTexture);
+		if (SUCCEEDED(hr)) {
+			dxgiShareTexture->GetSharedHandle(&texture_handle_);
+			dxgiShareTexture->Release();
+		}
 	}
 
 	D3D11_RENDER_TARGET_VIEW_DESC rtv_desc;
@@ -397,6 +420,11 @@ bool D3D11RenderTexture::InitRasterizerState()
 ID3D11Texture2D* D3D11RenderTexture::GetTexture()
 {
 	return texture_;
+}
+
+HANDLE D3D11RenderTexture::GetTextureHandle()
+{
+	return texture_handle_;
 }
 
 ID3D11RenderTargetView* D3D11RenderTexture::GetRenderTargetView()

@@ -34,6 +34,7 @@ public:
 	void UpdateScaling(double videoW, double videoH, double winW, double winH, int angle);
 
 	ID3D11Texture2D* GetTexture();
+	HANDLE GetTextureHandle();
 
 	ID3D11RenderTargetView* GetRenderTargetView();
 	ID3D11ShaderResourceView* GetShaderResourceView();
@@ -48,6 +49,7 @@ private:
 	ID3D11DeviceContext*        d3d11_context_    = NULL;
 
 	ID3D11Texture2D*            texture_          = NULL;
+	HANDLE                      texture_handle_   = NULL;// ¹²Ïí¾ä±ú
 	ID3D11ShaderResourceView*   texture_srv_      = NULL;
 	ID3D11RenderTargetView*     texture_rtv_      = NULL;
 

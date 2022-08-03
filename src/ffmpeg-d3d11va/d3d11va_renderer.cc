@@ -1,4 +1,8 @@
 #include "d3d11va_renderer.h"
+#include "av_log.h"
+
+#include <wrl.h>
+using Microsoft::WRL::ComPtr;
 
 D3D11VARenderer::D3D11VARenderer()
 {
@@ -35,15 +39,56 @@ void D3D11VARenderer::RenderFrame(AVFrame* frame)
 	ID3D11ShaderResourceView* nv12_texture_y_srv = input_textures_[DX::PIXEL_PLANE_NV12]->GetNV12YShaderResourceView();
 	ID3D11ShaderResourceView* nv12_texture_uv_srv = input_textures_[DX::PIXEL_PLANE_NV12]->GetNV12UVShaderResourceView();
 
-	d3d11_context_->CopySubresourceRegion(
-		nv12_texture,
-		0,
-		0,
-		0,
-		0,
-		(ID3D11Resource*)texture,
-		index,
-		NULL);
+	if (!useShareTexture)
+	{
+		d3d11_context_->CopySubresourceRegion(
+			nv12_texture,
+			0,
+			0,
+			0,
+			0,
+			(ID3D11Resource*)texture,
+			index,
+			NULL);
+	}
+	else
+	{
+		ComPtr<ID3D11Device> device;
+		ComPtr<ID3D11DeviceContext> deviceCtx;
+		ComPtr<ID3D11Texture2D> videoTextureShared;
+
+		HANDLE textureHandle = input_textures_[DX::PIXEL_PLANE_NV12]->GetTextureHandle();
+
+		texture->GetDevice(device.GetAddressOf());
+		if (!device) {
+			LOG("GetDevice fail");
+			return;
+		}
+
+		device->GetImmediateContext(deviceCtx.GetAddressOf());
+		if (!deviceCtx) {
+			LOG("GetImmediateContext fail");
+			return;
+		}
+
+		HRESULT hr = device->OpenSharedResource(textureHandle,
+			__uuidof(ID3D11Texture2D),
+			(void**)videoTextureShared.GetAddressOf());
+		if (FAILED(hr)) {
+			LOG("OpenSharedResource fail");
+			return;
+		}
+
+		deviceCtx->CopySubresourceRegion(
+			videoTextureShared.Get(),
+			0,
+			0, 0, 0,
+			texture,
+			index,
+			NULL);
+
+		deviceCtx->Flush();
+	}
 
 	DX::D3D11RenderTexture* render_target = render_targets_[DX::PIXEL_SHADER_NV12_BT601].get();
 	if (render_target) {

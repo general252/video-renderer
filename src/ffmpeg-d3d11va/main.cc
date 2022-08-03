@@ -31,6 +31,9 @@ int main(int argc, char** argv)
 		return -2;
 	}
 
+	const bool isUseShareTexture = true;
+	renderer.SetUseShareTexture(isUseShareTexture);
+
 	//renderer.SetSharpen(0.5);
 	//renderer.Rotate(-180);
 	//auto camera = renderer.GetCamera();
@@ -41,6 +44,7 @@ int main(int argc, char** argv)
 
 	bool abort_request = false;
 	std::string pathname = "piper.h264";
+	pathname = "F:/FFOutput/input.mp4";
 
 	std::thread decode_thread([&abort_request, &renderer, pathname] {
 		AVDemuxer demuxer;
@@ -53,7 +57,7 @@ int main(int argc, char** argv)
 
 		video_stream = demuxer.GetVideoStream();
 
-		if (!decoder.Init(video_stream, renderer.GetD3D11Device())) {
+		if (!decoder.Init(video_stream, isUseShareTexture ? NULL : renderer.GetD3D11Device())) {
 			abort_request = true;
 		}
 
