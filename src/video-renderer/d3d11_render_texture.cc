@@ -268,12 +268,23 @@ bool D3D11RenderTexture::InitVertexShader()
 	D3D11_BUFFER_DESC vertex_buffer_desc;
 	D3D11_SUBRESOURCE_DATA vertex_buffer_data;
 
-	Vertex vertices[] =
+	// 原点正面的中心点
+	//         Y___________Z
+	//         /|         /|
+	//        / |        / |
+	//(-1,1)B/__|_______/C(1,1)
+	//       |  |       |  |
+	//       | X|_______|__|W
+	//       |  /       |  /
+	//       | /        | /
+	//       |/_________|/
+	//(-1,1)A           D(1, -1)
+	Vertex vertices[4] =
 	{
-		{ XMFLOAT3(0.0f,  0.0f,   0.0f), XMFLOAT2(0.0f, 0.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) },
-		{ XMFLOAT3(0.0f,  height, 0.0f), XMFLOAT2(0.0f, 1.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) },
-		{ XMFLOAT3(width, 0.0f,   0.0f), XMFLOAT2(1.0f, 0.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) },
-		{ XMFLOAT3(width, height, 0.0f), XMFLOAT2(1.0f, 1.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) },
+		{ XMFLOAT3(-1,  1, 0), XMFLOAT2(0, 0), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) },
+		{ XMFLOAT3(1,  1, 0), XMFLOAT2(1, 0), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) },
+		{ XMFLOAT3(1, -1, 0), XMFLOAT2(1, 1), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) },
+		{ XMFLOAT3(-1, -1, 0), XMFLOAT2(0, 1), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) },
 	};
 
 	memset(&vertex_buffer_desc, 0, sizeof(D3D11_BUFFER_DESC));
@@ -304,6 +315,23 @@ bool D3D11RenderTexture::InitVertexShader()
 	if (FAILED(hr)) {
 		LOG("ID3D11Device::CreateBuffer() failed, %x \n", hr);
 		return false;
+	}
+
+	// 索引
+	{
+		// 设置索引缓冲区描述
+		D3D11_BUFFER_DESC ibd = {};
+		ibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
+		ibd.ByteWidth = sizeof(indices);
+		ibd.StructureByteStride = sizeof(UINT16);
+
+		// 新建索引缓冲区
+		D3D11_SUBRESOURCE_DATA isd = {};
+		isd.pSysMem = indices;
+
+		d3d11_device_->CreateBuffer(&ibd, &isd, &m_pIndexBuffer);
+		// 输入装配阶段的索引缓冲区设置
+		d3d11_context_->IASetIndexBuffer(m_pIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
 	}
 
 	return true;
@@ -445,6 +473,26 @@ void D3D11RenderTexture::Begin()
 	viewport.TopLeftY = 0;
 	d3d11_context_->RSSetViewports(1, &viewport);
 
+
+	// 原点正面的中心点
+	//         Y___________Z
+	//         /|         /|
+	//        / |        / |
+	//(-1,1)B/__|_______/C(1,1)
+	//       |  |       |  |
+	//       | X|_______|__|W
+	//       |  /       |  /
+	//       | /        | /
+	//       |/_________|/
+	//(-1,1)A           D(1, -1)
+	Vertex vertices[4] =
+	{
+		{ XMFLOAT3(-1,  1, 0), XMFLOAT2(0, 0), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) },
+		{ XMFLOAT3( 1,  1, 0), XMFLOAT2(1, 0), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) },
+		{ XMFLOAT3( 1, -1, 0), XMFLOAT2(1, 1), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) },
+		{ XMFLOAT3(-1, -1, 0), XMFLOAT2(0, 1), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) },
+	};
+
 	D3D11_MAPPED_SUBRESOURCE mapped_resource;
 	HRESULT hr = d3d11_context_->Map(vertex_buffer_, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped_resource);
 	if (FAILED(hr)) {
@@ -452,17 +500,15 @@ void D3D11RenderTexture::Begin()
 		return;
 	}
 	Vertex* vertex = (Vertex*)mapped_resource.pData;
-	vertex[0] = { XMFLOAT3(0.0f,  0.0f,   0.0f), XMFLOAT2(0.0f, 0.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) };
-	vertex[1] = { XMFLOAT3(0.0f,  height, 0.0f), XMFLOAT2(0.0f, 1.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) };
-	vertex[2] = { XMFLOAT3(width, 0.0f,   0.0f), XMFLOAT2(1.0f, 0.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) },
-		vertex[3] = { XMFLOAT3(width, height, 0.0f), XMFLOAT2(1.0f, 1.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) },
-		d3d11_context_->Unmap((ID3D11Resource*)vertex_buffer_, 0);
+	vertex[0] = vertices[0];
+	vertex[1] = vertices[1];
+	vertex[2] = vertices[2];
+	vertex[3] = vertices[3];
+	d3d11_context_->Unmap((ID3D11Resource*)vertex_buffer_, 0);
 
 	VertexShaderConstants vertex_shader_constants;
-	DirectX::XMMATRIX view = DirectX::XMMatrixIdentity();
-	DirectX::XMMATRIX projection = DirectX::XMMatrixOrthographicOffCenterLH(0.0f, 1.0f * width, 1.0f * height, 0.0f, 0.0f, 1.0f);
-	vertex_shader_constants.view = DirectX::XMMatrixTranspose(view);
-	vertex_shader_constants.projection = DirectX::XMMatrixTranspose(projection);
+	vertex_shader_constants.view = DirectX::XMMatrixIdentity();
+	vertex_shader_constants.projection = DirectX::XMMatrixTranspose(transformMatrix);
 	d3d11_context_->UpdateSubresource((ID3D11Resource*)vertex_constants_, 0, NULL, &vertex_shader_constants, 0, 0);
 
 	d3d11_context_->OMGetRenderTargets(1, &cache_rtv_, &cache_dsv_);
@@ -495,6 +541,8 @@ void D3D11RenderTexture::Begin()
 		const UINT stride = sizeof(Vertex);
 		const UINT offset = 0;
 		d3d11_context_->IASetVertexBuffers(0, 1, &vertex_buffer_, &stride, &offset);
+
+		d3d11_context_->IASetIndexBuffer(m_pIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
 	}
 
 	if (vertex_constants_) {
@@ -539,7 +587,7 @@ void D3D11RenderTexture::Draw()
 	}
 
 	d3d11_context_->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-	d3d11_context_->Draw(4, 0);
+	d3d11_context_->DrawIndexed(ARRAYSIZE(indices), 0, 0);
 	d3d11_context_->Flush();
 }
 
@@ -552,4 +600,46 @@ void D3D11RenderTexture::End()
 	d3d11_context_->OMSetRenderTargets(1, &cache_rtv_, cache_dsv_);
 	DX_SAFE_RELEASE(cache_rtv_);
 	DX_SAFE_RELEASE(cache_dsv_);
+}
+
+void D3D11RenderTexture::ResetCameraMatrix() {
+	transformMatrix = DirectX::XMMatrixRotationX(0);
+}
+
+void D3D11RenderTexture::MulTransformMatrix(const DirectX::XMMATRIX& matrix) {
+	transformMatrix *= matrix;
+}
+
+void D3D11RenderTexture::UpdateScaling(double videoW, double videoH, double winW, double winH, int angle)
+{
+	double srcRatio = 1;
+	double dstRatio = 1;
+
+	if (0 == angle % 180)
+	{
+		srcRatio = videoW / videoH;
+		dstRatio = winW / winH;
+	}
+	else if (0 == angle % 90)
+	{
+		srcRatio = videoW / videoH;
+		dstRatio = winH / winW;
+	}
+
+
+	if (srcRatio > dstRatio) {
+		// video 比较宽, 缩小宽度
+		MulTransformMatrix(DirectX::XMMatrixScaling(1, dstRatio / srcRatio, 1));
+	}
+	else if (srcRatio < dstRatio) {
+		// video 比较高, 缩小高度
+		MulTransformMatrix(DirectX::XMMatrixScaling(srcRatio / dstRatio, 1, 1));
+	}
+	else {
+		MulTransformMatrix(DirectX::XMMatrixScaling(1, 1, 1));
+	}
+
+	const double PI = 3.14159265358979;
+
+	MulTransformMatrix(DirectX::XMMatrixRotationZ((float)(PI * angle / 180)));
 }

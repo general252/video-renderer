@@ -21,12 +21,10 @@ void D3D11VARenderer::RenderFrame(AVFrame* frame)
 	ID3D11Texture2D* texture = (ID3D11Texture2D*)frame->data[0];
 	int index = (int)frame->data[1];
 
-	D3D11_TEXTURE2D_DESC desc;
-	texture->GetDesc(&desc);
 
 	if (pixel_format_ != DX::PIXEL_FORMAT_NV12 ||
-		width_ != desc.Width || height_ != desc.Height) {
-		if (!CreateTexture(desc.Width, desc.Height, DX::PIXEL_FORMAT_NV12)) {
+		width_ != frame->width || height_ != frame->height) {
+		if (!CreateTexture(frame->width, frame->height, DX::PIXEL_FORMAT_NV12)) {
 			return;
 		}
 	}
@@ -49,6 +47,8 @@ void D3D11VARenderer::RenderFrame(AVFrame* frame)
 
 	DX::D3D11RenderTexture* render_target = render_targets_[DX::PIXEL_SHADER_NV12_BT601].get();
 	if (render_target) {
+		this->UpdateMatrix(render_target);
+
 		render_target->Begin();
 		render_target->PSSetTexture(0, nv12_texture_y_srv);
 		render_target->PSSetTexture(1, nv12_texture_uv_srv);

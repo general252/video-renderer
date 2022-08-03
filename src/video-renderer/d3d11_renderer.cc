@@ -430,6 +430,17 @@ bool D3D11Renderer::CreateTexture(int width, int height, PixelFormat format)
 	return true;
 }
 
+void D3D11Renderer::UpdateMatrix(DX::D3D11RenderTexture* render_target)
+{
+	RECT rect;
+	GetClientRect(wnd_, &rect);
+
+	// 保持视频比例
+	render_target->ResetCameraMatrix();
+	render_target->MulTransformMatrix(camera.GetMatrix());
+	render_target->UpdateScaling(width_, height_, rect.right, rect.bottom, angle);
+}
+
 void D3D11Renderer::D3D11Renderer::Begin()
 {
 	if (main_render_target_view_) {
@@ -563,6 +574,7 @@ void D3D11Renderer::UpdateARGB(PixelFrame* frame)
 		d3d11_context_->Unmap((ID3D11Resource*)texture, sub_resource);
 
 		D3D11RenderTexture* render_target = render_targets_[PIXEL_SHADER_ARGB].get();
+		this->UpdateMatrix(render_target);
 		render_target->Begin();
 		render_target->PSSetTexture(0, shader_resource_view);
 		render_target->PSSetSamplers(0, linear_sampler_);
@@ -645,6 +657,8 @@ void D3D11Renderer::UpdateI444(PixelFrame* frame)
 
 	D3D11RenderTexture* render_target = render_targets_[PIXEL_SHADER_YUV_BT601].get();
 	if (render_target) {
+		this->UpdateMatrix(render_target);
+
 		render_target->Begin();
 		render_target->PSSetTexture(0, y_texture_view);
 		render_target->PSSetTexture(1, u_texture_view);
@@ -733,6 +747,8 @@ void D3D11Renderer::UpdateI420(PixelFrame* frame)
 
 	D3D11RenderTexture* render_target = render_targets_[PIXEL_SHADER_YUV_BT601].get();
 	if (render_target) {
+		this->UpdateMatrix(render_target);
+
 		render_target->Begin();
 		render_target->PSSetTexture(0, y_texture_view);
 		render_target->PSSetTexture(1, u_texture_view);
@@ -790,6 +806,8 @@ void D3D11Renderer::UpdateNV12(PixelFrame* frame)
 
 	D3D11RenderTexture* render_target = render_targets_[PIXEL_SHADER_NV12_BT601].get();
 	if (render_target) {
+		this->UpdateMatrix(render_target);
+
 		render_target->Begin();
 		render_target->PSSetTexture(0, luminance_view);
 		render_target->PSSetTexture(1, chrominance_view);

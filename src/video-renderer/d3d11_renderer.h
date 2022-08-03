@@ -3,6 +3,7 @@
 #include "renderer.h"
 #include "d3d11_render_texture.h"
 #include <mutex>
+#include "camera.h"
 
 namespace DX {
 
@@ -25,10 +26,16 @@ public:
 	// sharpness: 0.0 to 10.0
 	virtual void SetSharpen(float unsharp);
 
+	virtual void Rotate(float angle) { this->angle = angle; }
+	nv::Camera* GetCamera() { return &camera; }
+
+
 protected:
 	bool InitDevice();
 	bool CreateRenderer();
 	bool CreateTexture(int width, int height, PixelFormat format);
+
+	virtual void UpdateMatrix(DX::D3D11RenderTexture* render_target);
 	virtual void Begin();
 	virtual void Copy(PixelFrame* frame);
 	virtual void Process();
@@ -63,6 +70,8 @@ protected:
 
 	float unsharp_ = 0.0;
 	ID3D11Buffer* sharpen_constants_ = NULL;
+	nv::Camera camera;
+	float angle = 0;
 };
 
 }

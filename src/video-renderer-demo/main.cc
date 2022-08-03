@@ -156,6 +156,9 @@ int main(int argc, char** argv)
 	}
 
 	renderer.SetSharpen(0.5);
+	//renderer.Rotate(-180);
+	//auto camera = renderer.GetCamera();
+	//camera->cameraRollY += 0.3;
 
 	int original_width = 0, original_height = 0;
 	GetWindowSize(window.GetHandle(), original_width, original_height);

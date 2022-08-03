@@ -29,6 +29,10 @@ public:
 	void Draw();
 	void End();
 
+	void ResetCameraMatrix();
+	void MulTransformMatrix(const DirectX::XMMATRIX& matrix);
+	void UpdateScaling(double videoW, double videoH, double winW, double winH, int angle);
+
 	ID3D11Texture2D* GetTexture();
 
 	ID3D11RenderTargetView* GetRenderTargetView();
@@ -61,6 +65,16 @@ private:
 	ID3D11RenderTargetView*     nv12_uv_rtv_      = NULL;
 	ID3D11ShaderResourceView*   nv12_y_srv_       = NULL;
 	ID3D11ShaderResourceView*   nv12_uv_srv_      = NULL;
+
+	ID3D11Buffer*             m_pIndexBuffer      = NULL;            // 索引缓冲区
+
+	const UINT16 indices[6] = {
+		// 正面
+		0, 1, 2,
+		0, 2, 3, //  2, 3, 0,
+	};
+
+	DirectX::XMMATRIX transformMatrix = DirectX::XMMatrixRotationZ(0);
 };
 
 }
